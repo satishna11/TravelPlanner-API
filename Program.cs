@@ -89,6 +89,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 builder.Services.AddScoped<JwtService>();
 builder.Services.AddScoped<CosineSimilarityService>();
+builder.Services.AddScoped<ItineraryService>();
+builder.Services.AddScoped<TripService>();
 builder.Services.AddAuthorization();
 
 // =====================

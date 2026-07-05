@@ -1,5 +1,9 @@
+using System.ComponentModel.DataAnnotations.Schema;
+
 public class TripRequest
 {
+ 
+    public int? DestinationId { get; set; }
     public DateTime TravelDate { get; set; }
 
     public int Days { get; set; }

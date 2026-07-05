@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using TravelAI.Data;
 using TravelAI.Models.DTOs;
+using TravelAI.Models.Entities;
 
 public class ItineraryService
 {
@@ -11,11 +12,16 @@ public class ItineraryService
         _context = context;
     }
 
-    public async Task<ItenaryResponse.ItineraryResponse> Generate(TripRequest request, int destinationId)
+    public async Task<ItenaryResponse.ItineraryResponse> Generate(
+        int userId,
+        TripRequest request,
+        int destinationId)
     {
+        // Get destination
         var destination = await _context.Destinations
             .FirstAsync(x => x.DestinationId == destinationId);
 
+        // Select hotel
         var hotel = await _context.Hotels
             .Where(x => x.DestinationId == destinationId &&
                         x.Category == request.HotelCategory)
@@ -30,10 +36,43 @@ public class ItineraryService
                 .FirstOrDefaultAsync();
         }
 
+        // Load activities
         var activities = await _context.DestinationActivity
             .Where(x => x.DestinationId == destinationId)
             .ToListAsync();
 
+        // ============================
+        // SAVE TRIP
+        // ============================
+
+        var trip = new Trip
+        {
+            UserId = userId,
+            TravelDate = request.TravelDate,
+            Days = request.Days,
+            Budget = request.Budget,
+            Travellers = request.Travellers,
+            Transportation = request.Transportation,
+            HotelCategory = request.HotelCategory
+        };
+
+        _context.Trips.Add(trip);
+        await _context.SaveChangesAsync();
+
+        // ============================
+        // SAVE TRIP DESTINATION
+        // ============================
+
+        _context.TripDestinations.Add(new TripDestination
+        {
+            TripId = trip.TripId,
+            DestinationId = destinationId,
+            Sequence = 1
+        });
+
+        await _context.SaveChangesAsync();
+
+        // Response
         var response = new ItenaryResponse.ItineraryResponse
         {
             Destination = destination.Name,
@@ -46,26 +85,30 @@ public class ItineraryService
 
         for (int day = 1; day <= request.Days; day++)
         {
-            var plan = new DayPlan();
+            var plan = new DayPlan
+            {
+                Day = day
+            };
 
-            plan.Day = day;
+            string morningActivity = "";
+            string afternoonActivity = "";
+            string eveningActivity = "";
 
             if (day == 1)
             {
-                plan.Activities.Add($"Travel to {destination.Name}");
-                plan.Activities.Add($"Check in at {hotel?.HotelName}");
+                morningActivity = $"Travel to {destination.Name}";
+                afternoonActivity = $"Check in at {hotel?.HotelName}";
 
-                var afternoon = activities.FirstOrDefault(x =>
-                    x.TimeSlot == "Afternoon");
+                plan.Activities.Add(morningActivity);
+                plan.Activities.Add(afternoonActivity);
 
-                if (afternoon != null)
-                    plan.Activities.Add(afternoon.ActivityName);
-
-                var evening = activities.FirstOrDefault(x =>
-                    x.TimeSlot == "Evening");
+                var evening = activities.FirstOrDefault(x => x.TimeSlot == "Evening");
 
                 if (evening != null)
-                    plan.Activities.Add(evening.ActivityName);
+                {
+                    eveningActivity = evening.ActivityName;
+                    plan.Activities.Add(eveningActivity);
+                }
 
                 plan.Activities.Add("Dinner at local restaurant");
             }
@@ -78,13 +121,17 @@ public class ItineraryService
 
                 if (morning != null)
                 {
-                    plan.Activities.Add(morning.ActivityName);
+                    morningActivity = morning.ActivityName;
+                    plan.Activities.Add(morningActivity);
                     index++;
                 }
 
-                plan.Activities.Add("Shopping");
+                afternoonActivity = "Shopping";
+                eveningActivity = "Return Journey";
+
+                plan.Activities.Add(afternoonActivity);
                 plan.Activities.Add("Hotel Check-out");
-                plan.Activities.Add("Return Journey");
+                plan.Activities.Add(eveningActivity);
             }
             else
             {
@@ -95,7 +142,8 @@ public class ItineraryService
 
                 if (morning != null)
                 {
-                    plan.Activities.Add(morning.ActivityName);
+                    morningActivity = morning.ActivityName;
+                    plan.Activities.Add(morningActivity);
                     index++;
                 }
 
@@ -104,7 +152,8 @@ public class ItineraryService
 
                 if (afternoon != null)
                 {
-                    plan.Activities.Add(afternoon.ActivityName);
+                    afternoonActivity = afternoon.ActivityName;
+                    plan.Activities.Add(afternoonActivity);
                     index++;
                 }
 
@@ -113,15 +162,35 @@ public class ItineraryService
 
                 if (evening != null)
                 {
-                    plan.Activities.Add(evening.ActivityName);
+                    eveningActivity = evening.ActivityName;
+                    plan.Activities.Add(eveningActivity);
                     index++;
                 }
 
                 plan.Activities.Add("Dinner");
             }
 
+            // ============================
+            // SAVE ITINERARY
+            // ============================
+
+            var itinerary = new Itinerary
+            {
+                TripId = trip.TripId,
+                DestinationId = destinationId,
+                DayNumber = day,
+                Morning = morningActivity,
+                Afternoon = afternoonActivity,
+                Evening = eveningActivity,
+                EstimatedCost = 3000 // You can calculate this later
+            };
+
+            _context.Itineraries.Add(itinerary);
+
             response.Days.Add(plan);
         }
+
+        await _context.SaveChangesAsync();
 
         return response;
     }
