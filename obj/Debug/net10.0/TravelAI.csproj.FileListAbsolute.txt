@@ -1,5 +1,6 @@
 /Users/satishnashakya/Projects/TravelAI/bin/Debug/net10.0/appsettings.Development.json
 /Users/satishnashakya/Projects/TravelAI/bin/Debug/net10.0/appsettings.json
+/Users/satishnashakya/Projects/TravelAI/bin/Debug/net10.0/TravelAI.staticwebassets.runtime.json
 /Users/satishnashakya/Projects/TravelAI/bin/Debug/net10.0/TravelAI.staticwebassets.endpoints.json
 /Users/satishnashakya/Projects/TravelAI/bin/Debug/net10.0/TravelAI
 /Users/satishnashakya/Projects/TravelAI/bin/Debug/net10.0/TravelAI.deps.json
@@ -11,7 +12,6 @@
 /Users/satishnashakya/Projects/TravelAI/bin/Debug/net10.0/BCrypt-Net-Next.dll
 /Users/satishnashakya/Projects/TravelAI/bin/Debug/net10.0/Humanizer.dll
 /Users/satishnashakya/Projects/TravelAI/bin/Debug/net10.0/Microsoft.AspNetCore.Authentication.JwtBearer.dll
-/Users/satishnashakya/Projects/TravelAI/bin/Debug/net10.0/Microsoft.AspNetCore.OpenApi.dll
 /Users/satishnashakya/Projects/TravelAI/bin/Debug/net10.0/Microsoft.Bcl.AsyncInterfaces.dll
 /Users/satishnashakya/Projects/TravelAI/bin/Debug/net10.0/Microsoft.Bcl.Cryptography.dll
 /Users/satishnashakya/Projects/TravelAI/bin/Debug/net10.0/Microsoft.Build.Framework.dll
@@ -38,6 +38,7 @@
 /Users/satishnashakya/Projects/TravelAI/bin/Debug/net10.0/Microsoft.IdentityModel.Tokens.dll
 /Users/satishnashakya/Projects/TravelAI/bin/Debug/net10.0/Microsoft.OpenApi.dll
 /Users/satishnashakya/Projects/TravelAI/bin/Debug/net10.0/Microsoft.SqlServer.Server.dll
+/Users/satishnashakya/Projects/TravelAI/bin/Debug/net10.0/Microsoft.VisualStudio.SolutionPersistence.dll
 /Users/satishnashakya/Projects/TravelAI/bin/Debug/net10.0/Mono.TextTemplating.dll
 /Users/satishnashakya/Projects/TravelAI/bin/Debug/net10.0/Newtonsoft.Json.dll
 /Users/satishnashakya/Projects/TravelAI/bin/Debug/net10.0/Swashbuckle.AspNetCore.Swagger.dll
@@ -145,6 +146,7 @@
 /Users/satishnashakya/Projects/TravelAI/obj/Debug/net10.0/TravelAI.csproj.CoreCompileInputs.cache
 /Users/satishnashakya/Projects/TravelAI/obj/Debug/net10.0/TravelAI.MvcApplicationPartsAssemblyInfo.cs
 /Users/satishnashakya/Projects/TravelAI/obj/Debug/net10.0/TravelAI.MvcApplicationPartsAssemblyInfo.cache
+/Users/satishnashakya/Projects/TravelAI/obj/Debug/net10.0/TravelAI.sourcelink.json
 /Users/satishnashakya/Projects/TravelAI/obj/Debug/net10.0/rjimswa.dswa.cache.json
 /Users/satishnashakya/Projects/TravelAI/obj/Debug/net10.0/rjsmrazor.dswa.cache.json
 /Users/satishnashakya/Projects/TravelAI/obj/Debug/net10.0/rjsmcshtml.dswa.cache.json
@@ -160,5 +162,3 @@
 /Users/satishnashakya/Projects/TravelAI/obj/Debug/net10.0/TravelAI.pdb
 /Users/satishnashakya/Projects/TravelAI/obj/Debug/net10.0/TravelAI.genruntimeconfig.cache
 /Users/satishnashakya/Projects/TravelAI/obj/Debug/net10.0/ref/TravelAI.dll
-/Users/satishnashakya/Projects/TravelAI/bin/Debug/net10.0/Microsoft.VisualStudio.SolutionPersistence.dll
-/Users/satishnashakya/Projects/TravelAI/obj/Debug/net10.0/TravelAI.sourcelink.json

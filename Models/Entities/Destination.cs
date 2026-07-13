@@ -15,7 +15,7 @@ public class Destination
     public decimal AverageBudget { get; set; }
 
     public string ImageUrl { get; set; } = "";
-
+    public int ViewCount { get; set; }
     public ICollection<Hotel>? Hotels { get; set; }
 
     public DestinationFeature? Feature { get; set; }

@@ -18,18 +18,63 @@ namespace TravelAI.Controllers
             _itineraryService = itineraryService;
         }
 
-        [Authorize(Roles = "User")]
         [HttpPost("generate-itinerary")]
         public async Task<IActionResult> GenerateItinerary([FromBody] TripRequest request)
         {
-            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
 
-            var result = await _itineraryService.Generate(
-                userId,
-                request,
-                request.DestinationId!.Value);
+            if (request.TravelDate.Date < DateTime.Today)
+                return Fail("Travel date cannot be in the past.");
 
-            return Success(result);
+            if (request.Days <= 0)
+                return Fail("Days must be greater than zero.");
+
+            if (request.Budget <= 0)
+                return Fail("Budget must be greater than zero.");
+
+            if (request.Travellers <= 0)
+                return Fail("Travellers must be greater than zero.");
+            // Check request
+            if (request == null)
+            {
+                return BadRequest("Request cannot be null.");
+            }
+
+            // Check DestinationId
+            if (!request.DestinationId.HasValue)
+            {
+                return BadRequest("DestinationId is required.");
+            }
+
+            // Get logged-in user
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+
+            if (userIdClaim == null)
+            {
+                return Unauthorized("User ID not found in token.");
+            }
+
+            if (!int.TryParse(userIdClaim.Value, out int userId))
+            {
+                return Unauthorized("Invalid User ID.");
+            }
+
+            // Generate itinerary
+            try
+            {
+                var result = await _itineraryService.Generate(
+                    userId,
+                    request,
+                    request.DestinationId.Value);
+
+                return Success(result, "Itinerary generated successfully.");
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.ToString());
+            }
+            return Success( "Itinerary generated successfully.");
         }
     }
 }

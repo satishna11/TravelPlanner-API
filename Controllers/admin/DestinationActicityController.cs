@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TravelAI.Data;
+using TravelAI.Models.DTOs;
 using TravelAI.Models.Entities;
 
 namespace TravelAI.Controllers.Admin
@@ -17,15 +18,27 @@ namespace TravelAI.Controllers.Admin
 
         // GET: api/admin/DestinationActivity
         [HttpGet]
+ 
         public async Task<IActionResult> GetAll()
         {
             var activities = await _context.DestinationActivity
                 .Include(x => x.Destination)
+                .Select(x => new DestinationActivityDto
+                {
+                    DestinationActivityId = x.DestinationActivityId,
+                    DestinationId = x.DestinationId,
+                    DestinationName = x.Destination.Name,
+                    ActivityName = x.ActivityName,
+                    Category = x.Category,
+                    TimeSlot = x.TimeSlot,
+                    EstimatedCost = x.EstimatedCost,
+                    DurationHours = x.DurationHours,
+                    ImageUrl = x.ImageUrl
+                })
                 .ToListAsync();
 
             return Success(activities);
         }
-
         // GET: api/admin/DestinationActivity/5
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
@@ -46,20 +59,41 @@ namespace TravelAI.Controllers.Admin
         {
             var activities = await _context.DestinationActivity
                 .Where(x => x.DestinationId == destinationId)
+                .Select(x => new DestinationActivityDto
+                {
+                    DestinationActivityId = x.DestinationActivityId,
+                    DestinationId = x.DestinationId,
+                    ActivityName = x.ActivityName,
+                    Category = x.Category,
+                    TimeSlot = x.TimeSlot,
+                    EstimatedCost = x.EstimatedCost,
+                    DurationHours = x.DurationHours,
+                    ImageUrl = x.ImageUrl
+                })
                 .ToListAsync();
 
             return Success(activities);
         }
-
         // POST: api/admin/DestinationActivity
         [HttpPost]
-        public async Task<IActionResult> Create(DestinationActivity activity)
+        public async Task<IActionResult> Create(DestinationActivityDto dto)
         {
             var destination = await _context.Destinations
-                .FindAsync(activity.DestinationId);
+                .FindAsync(dto.DestinationId);
 
             if (destination == null)
                 return Fail("Destination not found.");
+
+            var activity = new DestinationActivity
+            {
+                DestinationId = dto.DestinationId,
+                ActivityName = dto.ActivityName,
+                Category = dto.Category,
+                TimeSlot = dto.TimeSlot,
+                EstimatedCost = dto.EstimatedCost,
+                DurationHours = dto.DurationHours,
+                ImageUrl = dto.ImageUrl
+            };
 
             _context.DestinationActivity.Add(activity);
 
@@ -67,30 +101,28 @@ namespace TravelAI.Controllers.Admin
 
             return Success(activity, "Activity created successfully.");
         }
-
         // PUT: api/admin/DestinationActivity/5
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(int id, DestinationActivity activity)
+        public async Task<IActionResult> Update(int id, DestinationActivityDto dto)
         {
-            var existing = await _context.DestinationActivity
+            var activity = await _context.DestinationActivity
                 .FindAsync(id);
 
-            if (existing == null)
+            if (activity == null)
                 return NotFoundResponse("Activity not found.");
 
-            existing.ActivityName = activity.ActivityName;
-            existing.TimeSlot = activity.TimeSlot;
-            existing.Category = activity.Category;
-            existing.EstimatedCost = activity.EstimatedCost;
-            existing.DurationHours = activity.DurationHours;
-            existing.ImageUrl = activity.ImageUrl;
-            existing.DestinationId = activity.DestinationId;
+            activity.DestinationId = dto.DestinationId;
+            activity.ActivityName = dto.ActivityName;
+            activity.Category = dto.Category;
+            activity.TimeSlot = dto.TimeSlot;
+            activity.EstimatedCost = dto.EstimatedCost;
+            activity.DurationHours = dto.DurationHours;
+            activity.ImageUrl = dto.ImageUrl;
 
             await _context.SaveChangesAsync();
 
-            return Success(existing, "Activity updated successfully.");
+            return Success(activity, "Activity updated successfully.");
         }
-
         // DELETE: api/admin/DestinationActivity/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)

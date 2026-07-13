@@ -17,7 +17,7 @@ namespace TravelAI.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.0")
+                .HasAnnotation("ProductVersion", "10.0.4")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -53,6 +53,9 @@ namespace TravelAI.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int>("ViewCount")
+                        .HasColumnType("int");
+
                     b.HasKey("DestinationId");
 
                     b.ToTable("Destinations");
@@ -75,19 +78,10 @@ namespace TravelAI.Migrations
                     b.Property<int>("DestinationId")
                         .HasColumnType("int");
 
-                    b.Property<int>("Family")
-                        .HasColumnType("int");
-
                     b.Property<int>("Luxury")
                         .HasColumnType("int");
 
                     b.Property<int>("Nature")
-                        .HasColumnType("int");
-
-                    b.Property<int>("NightLife")
-                        .HasColumnType("int");
-
-                    b.Property<int>("Relaxation")
                         .HasColumnType("int");
 
                     b.Property<int>("Religious")

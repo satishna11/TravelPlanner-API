@@ -1,14 +1,10 @@
-using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-
+using Microsoft.OpenApi.Models;
 using System.Text;
-using Microsoft.OpenApi;
-// using ProjectTypeMiddlewares.Middleware;
 using TravelAI.Data;
 using TravelAI.Services;
-
-// using TravelAI.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,32 +14,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 
 // =====================
-// Swagger
-// =====================
-builder.Services.AddEndpointsApiExplorer();
-
-builder.Services.AddSwaggerGen(options =>
-{
-    options.SwaggerDoc("v1", new OpenApiInfo
-    {
-        Title = "TravelAI",
-        Version = "v1"
-    });
-
-    // JWT support in Swagger UI
-    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
-    {
-        Name = "Authorization",
-        Type = SecuritySchemeType.Http,
-        Scheme = "bearer",
-        BearerFormat = "JWT",
-        In = ParameterLocation.Header,
-        Description = "Enter: Bearer {your token}"
-    });
-});
-
-// =====================
-// DB Context
+// Database
 // =====================
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(
@@ -51,20 +22,18 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     ));
 
 // =====================
-// Services
+// CORS
 // =====================
-// builder.Services.AddScoped<IAuthService, AuthService>();
-// builder.Services.AddScoped<JwtService>();
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll",
-        policy =>
-        {
-            policy.AllowAnyOrigin()
-                .AllowAnyHeader()
-                .AllowAnyMethod();
-        });
+    options.AddPolicy("ReactPolicy", policy =>
+    {
+        policy.WithOrigins("http://localhost:5173")
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
 });
+
 // =====================
 // JWT Authentication
 // =====================
@@ -73,6 +42,9 @@ var jwt = builder.Configuration.GetSection("Jwt");
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
+        options.RequireHttpsMetadata = false;
+        options.SaveToken = true;
+
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
@@ -84,17 +56,86 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidAudience = jwt["Audience"],
             IssuerSigningKey = new SymmetricSecurityKey(
                 Encoding.UTF8.GetBytes(jwt["Key"]!)
-            )
+            ),
+
+            ClockSkew = TimeSpan.Zero
+        };
+
+        // Debug JWT errors
+        options.Events = new JwtBearerEvents
+        {
+            OnAuthenticationFailed = context =>
+            {
+                Console.WriteLine($"Authentication Failed: {context.Exception.Message}");
+                return Task.CompletedTask;
+            },
+
+            OnChallenge = context =>
+            {
+                Console.WriteLine("Unauthorized request.");
+                return Task.CompletedTask;
+            },
+
+            OnTokenValidated = context =>
+            {
+                Console.WriteLine("Token validated successfully.");
+                return Task.CompletedTask;
+            }
         };
     });
+
+builder.Services.AddAuthorization();
+
+// =====================
+// Dependency Injection
+// =====================
 builder.Services.AddScoped<JwtService>();
 builder.Services.AddScoped<CosineSimilarityService>();
 builder.Services.AddScoped<ItineraryService>();
 builder.Services.AddScoped<TripService>();
-builder.Services.AddAuthorization();
 
 // =====================
-// App Build
+// Swagger
+// =====================
+builder.Services.AddEndpointsApiExplorer();
+
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "TravelAI API",
+        Version = "v1"
+    });
+
+    // JWT Authentication
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT"
+    });
+
+    // THIS IS THE PART YOU WERE MISSING
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+});
+
+// =====================
+// Build App
 // =====================
 var app = builder.Build();
 
@@ -107,11 +148,12 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-// app.UseMiddleware<ProjectTypeMiddleware>();
 app.UseHttpsRedirection();
-app.UseCors("AllowAll");
 
+app.UseCors("ReactPolicy");
+app.UseStaticFiles();
 app.UseAuthentication();
+
 app.UseAuthorization();
 
 app.MapControllers();

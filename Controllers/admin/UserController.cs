@@ -58,8 +58,8 @@ namespace TravelAI.Controllers.admin
 
             existing.FullName = user.FullName;
             existing.Email = user.Email;
-            existing.PasswordHash = user.PasswordHash;
-            existing.ProfileImage = user.ProfileImage;
+            
+            existing.UserType = user.UserType;
 
             await _context.SaveChangesAsync();
 

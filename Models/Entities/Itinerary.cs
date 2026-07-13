@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations.Schema;
+using TravelAI.Models.Entities;
 
 public class Itinerary
 {

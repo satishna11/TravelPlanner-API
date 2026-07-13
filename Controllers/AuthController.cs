@@ -34,14 +34,44 @@ namespace TravelAI.Controllers
             {
                 FullName = request.FullName,
                 Email = request.Email,
-                UserType = "Admin",
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password)
+                UserType = "User",
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
+                CreatedAt = DateTime.UtcNow
             };
-
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
 
             return Success(user, "User registered");
+        }
+        
+        [HttpPost("loginAdmin")]
+        public async Task<IActionResult> LoginAdmin(LoginRequest request)
+        {
+            var user = await _context.Users
+                .FirstOrDefaultAsync(x => x.Email == request.Email);
+
+            if (user == null)
+                return Fail("Invalid credentials");
+
+            if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
+                return Fail("Invalid credentials");
+
+            if (user.UserType != "Admin")
+                return Fail("Only admins are allowed.");
+
+            var token = _jwt.GenerateToken(user);
+
+            return Success(new
+            {
+                token,
+                user = new
+                {
+                    user.UserId,
+                    user.FullName,
+                    user.Email,
+                    user.UserType
+                }
+            }, "Login successful");
         }
         [HttpPost("login")]
         public async Task<IActionResult> Login(LoginRequest request)
@@ -52,11 +82,11 @@ namespace TravelAI.Controllers
             if (user == null)
                 return Fail("Invalid credentials");
 
-            var validPassword = BCrypt.Net.BCrypt.Verify(
-                request.Password, user.PasswordHash);
-
-            if (!validPassword)
+            if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
                 return Fail("Invalid credentials");
+
+            if (user.UserType != "User")
+                return Fail("Only users are allowed.");
 
             var token = _jwt.GenerateToken(user);
 

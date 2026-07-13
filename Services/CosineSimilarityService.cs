@@ -14,8 +14,9 @@ namespace TravelAI.Services
             _context = context;
         }
 
-        public async Task<List<RecommendationResult>> RecommendDestinations(TripRequest request)
+        public async Task<List<RecommendationResult>> RecommendDestinations(RecommendationRequest request)
         {
+            
             // Load destination features with destination info
             var features = await _context.DestinationFeatures
                 .Include(x => x.Destination)
@@ -48,18 +49,18 @@ namespace TravelAI.Services
 
         // ---------------- VECTOR BUILDERS ----------------
 
-        private double[] BuildUserVector(TripRequest request)
+        private double[] BuildUserVector(RecommendationRequest request)
         {
             return new double[]
             {
                 Clamp(request.Adventure),
                 Clamp(request.Nature),
                 Clamp(request.Culture),
-                Clamp(request.Luxury),
+          
                 Clamp(request.Wildlife),
                 Clamp(request.Trekking),
-                Clamp(request.Family),
-                Clamp(request.Relaxation),
+               
+         
                 Clamp(request.Religious),
                 Clamp(request.NightLife)
             };
@@ -70,15 +71,13 @@ namespace TravelAI.Services
             return new double[]
             {
                 feature.Adventure,
-                feature.Nature,
-                feature.Culture,
-                feature.Luxury,
-                feature.Wildlife,
-                feature.Trekking,
-                feature.Family,
-                feature.Relaxation,
-                feature.Religious,
-                feature.NightLife
+                   feature.Nature,
+                   feature.Wildlife,
+                   feature.Religious,
+                   feature.Culture,
+                   feature.Luxury,
+                   feature.Trekking
+             
             };
         }
 

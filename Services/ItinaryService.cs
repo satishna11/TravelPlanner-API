@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using TravelAI.Data;
 using TravelAI.Models.DTOs;
-using TravelAI.Models.Entities;
 
 public class ItineraryService
 {
@@ -19,15 +18,24 @@ public class ItineraryService
     {
         // Get destination
         var destination = await _context.Destinations
-            .FirstAsync(x => x.DestinationId == destinationId);
+            .FirstOrDefaultAsync(x => x.DestinationId == destinationId);
 
-        // Select hotel
+        if (destination == null)
+        {
+            throw new Exception("Destination not found.");
+        }
+
+
+        // Select hotel according to category
         var hotel = await _context.Hotels
-            .Where(x => x.DestinationId == destinationId &&
-                        x.Category == request.HotelCategory)
+            .Where(x =>
+                x.DestinationId == destinationId &&
+                x.Category == request.HotelCategory)
             .OrderByDescending(x => x.Rating)
             .FirstOrDefaultAsync();
 
+
+        // If category hotel not found, select highest rated hotel
         if (hotel == null)
         {
             hotel = await _context.Hotels
@@ -36,43 +44,21 @@ public class ItineraryService
                 .FirstOrDefaultAsync();
         }
 
+
         // Load activities
         var activities = await _context.DestinationActivity
             .Where(x => x.DestinationId == destinationId)
             .ToListAsync();
 
-        // ============================
-        // SAVE TRIP
-        // ============================
 
-        var trip = new Trip
+        if (!activities.Any())
         {
-            UserId = userId,
-            TravelDate = request.TravelDate,
-            Days = request.Days,
-            Budget = request.Budget,
-            Travellers = request.Travellers,
-            Transportation = request.Transportation,
-            HotelCategory = request.HotelCategory
-        };
+            throw new Exception("No activities available for this destination.");
+        }
 
-        _context.Trips.Add(trip);
-        await _context.SaveChangesAsync();
 
-        // ============================
-        // SAVE TRIP DESTINATION
-        // ============================
-
-        _context.TripDestinations.Add(new TripDestination
-        {
-            TripId = trip.TripId,
-            DestinationId = destinationId,
-            Sequence = 1
-        });
-
-        await _context.SaveChangesAsync();
-
-        // Response
+        // Create response only
+        // Nothing saved here
         var response = new ItenaryResponse.ItineraryResponse
         {
             Destination = destination.Name,
@@ -81,7 +67,9 @@ public class ItineraryService
             EstimatedBudget = request.Budget
         };
 
+
         int index = 0;
+
 
         for (int day = 1; day <= request.Days; day++)
         {
@@ -90,19 +78,28 @@ public class ItineraryService
                 Day = day
             };
 
+
             string morningActivity = "";
             string afternoonActivity = "";
             string eveningActivity = "";
 
+
+            // First day
             if (day == 1)
             {
                 morningActivity = $"Travel to {destination.Name}";
-                afternoonActivity = $"Check in at {hotel?.HotelName}";
+
+                afternoonActivity =
+                    $"Check in at {hotel?.HotelName ?? "recommended hotel"}";
+
 
                 plan.Activities.Add(morningActivity);
                 plan.Activities.Add(afternoonActivity);
 
-                var evening = activities.FirstOrDefault(x => x.TimeSlot == "Evening");
+
+                var evening = activities
+                    .FirstOrDefault(x => x.TimeSlot == "Evening");
+
 
                 if (evening != null)
                 {
@@ -110,14 +107,24 @@ public class ItineraryService
                     plan.Activities.Add(eveningActivity);
                 }
 
-                plan.Activities.Add("Dinner at local restaurant");
+
+                plan.Activities.Add(
+                    "Dinner at local restaurant"
+                );
             }
+
+
+            // Last day
             else if (day == request.Days)
             {
                 plan.Activities.Add("Breakfast");
 
-                var morning = activities.Skip(index)
-                    .FirstOrDefault(x => x.TimeSlot == "Morning");
+
+                var morning = activities
+                    .Skip(index)
+                    .FirstOrDefault(x =>
+                        x.TimeSlot == "Morning");
+
 
                 if (morning != null)
                 {
@@ -126,19 +133,28 @@ public class ItineraryService
                     index++;
                 }
 
+
                 afternoonActivity = "Shopping";
                 eveningActivity = "Return Journey";
+
 
                 plan.Activities.Add(afternoonActivity);
                 plan.Activities.Add("Hotel Check-out");
                 plan.Activities.Add(eveningActivity);
             }
+
+
+            // Middle days
             else
             {
                 plan.Activities.Add("Breakfast");
 
-                var morning = activities.Skip(index)
-                    .FirstOrDefault(x => x.TimeSlot == "Morning");
+
+                var morning = activities
+                    .Skip(index)
+                    .FirstOrDefault(x =>
+                        x.TimeSlot == "Morning");
+
 
                 if (morning != null)
                 {
@@ -147,8 +163,13 @@ public class ItineraryService
                     index++;
                 }
 
-                var afternoon = activities.Skip(index)
-                    .FirstOrDefault(x => x.TimeSlot == "Afternoon");
+
+
+                var afternoon = activities
+                    .Skip(index)
+                    .FirstOrDefault(x =>
+                        x.TimeSlot == "Afternoon");
+
 
                 if (afternoon != null)
                 {
@@ -157,8 +178,13 @@ public class ItineraryService
                     index++;
                 }
 
-                var evening = activities.Skip(index)
-                    .FirstOrDefault(x => x.TimeSlot == "Evening");
+
+
+                var evening = activities
+                    .Skip(index)
+                    .FirstOrDefault(x =>
+                        x.TimeSlot == "Evening");
+
 
                 if (evening != null)
                 {
@@ -167,30 +193,22 @@ public class ItineraryService
                     index++;
                 }
 
+
                 plan.Activities.Add("Dinner");
             }
 
-            // ============================
-            // SAVE ITINERARY
-            // ============================
 
-            var itinerary = new Itinerary
-            {
-                TripId = trip.TripId,
-                DestinationId = destinationId,
-                DayNumber = day,
-                Morning = morningActivity,
-                Afternoon = afternoonActivity,
-                Evening = eveningActivity,
-                EstimatedCost = 3000 // You can calculate this later
-            };
 
-            _context.Itineraries.Add(itinerary);
-
+            // Only add to response
+            // Database saving happens after Save Trip button
             response.Days.Add(plan);
         }
 
-        await _context.SaveChangesAsync();
+
+
+        // No SaveChangesAsync()
+        // No database insert
+
 
         return response;
     }

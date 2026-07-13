@@ -17,15 +17,28 @@ namespace TravelAI.Controllers
 
         // GET: api/DestinationFeature
         [HttpGet]
+        [HttpGet]
         public async Task<IActionResult> GetAll()
         {
             var data = await _context.DestinationFeatures
                 .Include(x => x.Destination)
+                .Select(x => new
+                {
+                    destinationFeatureId = x.DestinationFeatureId,
+                    destinationId = x.DestinationId,
+                    destinationName = x.Destination.Name,
+                    adventure = x.Adventure,
+                    nature = x.Nature,
+                    culture = x.Culture,
+                    luxury = x.Luxury,
+                    wildlife = x.Wildlife,
+                    trekking = x.Trekking,
+                    religious = x.Religious
+                })
                 .ToListAsync();
 
             return Success(data);
         }
-
         // GET: api/DestinationFeature/5
         [HttpGet("{id}")]
         public async Task<IActionResult> Get(int id)
@@ -83,10 +96,9 @@ namespace TravelAI.Controllers
                 Luxury = model.Luxury,
                 Wildlife = model.Wildlife,
                 Trekking = model.Trekking,
-                Family = model.Family,
-                Relaxation = model.Relaxation,
+               
                 Religious = model.Religious,
-                NightLife = model.NightLife
+                
             }, "Destination features created successfully.");
         }
 
@@ -106,10 +118,9 @@ namespace TravelAI.Controllers
             feature.Luxury = model.Luxury;
             feature.Wildlife = model.Wildlife;
             feature.Trekking = model.Trekking;
-            feature.Family = model.Family;
-            feature.Relaxation = model.Relaxation;
+         
             feature.Religious = model.Religious;
-            feature.NightLife = model.NightLife;
+           
 
             await _context.SaveChangesAsync();
 
