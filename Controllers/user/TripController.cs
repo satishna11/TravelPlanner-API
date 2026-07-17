@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using Microsoft.EntityFrameworkCore;
 using TravelAI.Data;
 using TravelAI.Models.DTOs;
 using TravelAI.Models.Entities;
@@ -79,25 +80,26 @@ namespace TravelAI.Controllers
             // ============================
             // SAVE ITINERARY
             // ============================
-
-            foreach (var day in request.Itineraries)
+            if (request.Itineraries != null && request.Itineraries.Any())
             {
-                var itinerary = new Itinerary
+                foreach (var day in request.Itineraries)
                 {
-                    TripId = trip.TripId,
-                    DestinationId = request.DestinationId,
-                    DayNumber = day.DayNumber,
-                    Morning = day.Morning,
-                    Afternoon = day.Afternoon,
-                    Evening = day.Evening,
-                    EstimatedCost = day.EstimatedCost
-                };
+                    var itinerary = new Itinerary
+                    {
+                        TripId = trip.TripId,
+                        DestinationId = request.DestinationId,
+                        DayNumber = day.DayNumber,
+                        Morning = day.Morning,
+                        Afternoon = day.Afternoon,
+                        Evening = day.Evening,
+                        EstimatedCost = day.EstimatedCost
+                    };
 
-                _context.Itineraries.Add(itinerary);
+                    _context.Itineraries.Add(itinerary);
+                }
+
+                await _context.SaveChangesAsync();
             }
-
-            await _context.SaveChangesAsync();
-
 
 
             return Success(new
@@ -107,6 +109,147 @@ namespace TravelAI.Controllers
             "Trip saved successfully.");
 
         }
-        
+    [HttpGet("my-trips")]
+    public async Task<IActionResult> GetMyTrips()
+    {
+        var userId = int.Parse(
+            User.FindFirst(ClaimTypes.NameIdentifier)!.Value
+        );
+
+        var trips = await _context.Trips
+            .Where(t => t.UserId == userId)
+            .Select(t => new
+            {
+                t.TripId,
+                t.TravelDate,
+                t.Budget,
+                t.Days,
+                t.HotelCategory,
+                t.Transportation,
+                t.Status,
+                Destination = _context.TripDestinations
+                    .Where(td => td.TripId == t.TripId)
+                    .Join(
+                        _context.Destinations,
+                        td => td.DestinationId,
+                        d => d.DestinationId,
+                        (td, d) => new
+                        {
+                            d.Name,
+                            d.ImageUrl
+                        })
+                    .FirstOrDefault()
+            })
+            .OrderByDescending(t => t.TravelDate)
+            .ToListAsync();
+
+        return Success(trips, "My trips fetched successfully.");
     }
+    [HttpGet("{tripId}")]
+    public async Task<IActionResult> GetTripDetails(int tripId)
+    {
+        var userId = int.Parse(
+            User.FindFirst(ClaimTypes.NameIdentifier)!.Value
+        );
+
+        var trip = await _context.Trips
+            .Where(t => t.TripId == tripId && t.UserId == userId)
+            .Select(t => new
+            {
+                t.TripId,
+                t.TravelDate,
+                t.Days,
+                t.Budget,
+                t.Travellers,
+                t.Transportation,
+                t.HotelCategory,
+
+                Destination = _context.TripDestinations
+                    .Where(td => td.TripId == t.TripId)
+                    .Join(
+                        _context.Destinations,
+                        td => td.DestinationId,
+                        d => d.DestinationId,
+                        (td, d) => new
+                        {
+                            d.Name,
+                            d.City,
+                            d.Country,
+                            d.Description,
+                            d.ImageUrl
+                        })
+                    .FirstOrDefault(),
+
+                Itineraries = _context.Itineraries
+                    .Where(i => i.TripId == t.TripId)
+                    .OrderBy(i => i.DayNumber)
+                    .Select(i => new
+                    {
+                        i.DayNumber,
+                        i.Morning,
+                        i.Afternoon,
+                        i.Evening,
+                        i.EstimatedCost
+                    })
+                    .ToList()
+            })
+            .FirstOrDefaultAsync();
+
+        if (trip == null)
+        {
+            return Fail("Trip not found.");
+        }
+
+        return Success(trip, "Trip details fetched successfully.");
+    }
+    [HttpPut("{tripId}/complete")]
+    public async Task<IActionResult> CompleteTrip(int tripId)
+    {
+        var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+        var trip = await _context.Trips
+            .FirstOrDefaultAsync(x =>
+                x.TripId == tripId &&
+                x.UserId == userId);
+
+        if (trip == null)
+            return Fail("Trip not found.");
+
+        trip.Status = "Completed";
+
+        await _context.SaveChangesAsync();
+
+        return Success(null, "Trip marked as completed.");
+    }
+    [HttpDelete("{tripId}")]
+    public async Task<IActionResult> DeleteTrip(int tripId)
+    {
+        var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+        var trip = await _context.Trips
+            .FirstOrDefaultAsync(x =>
+                x.TripId == tripId &&
+                x.UserId == userId);
+
+        if (trip == null)
+            return Fail("Trip not found.");
+
+        var itineraries = _context.Itineraries
+            .Where(i => i.TripId == tripId);
+
+        _context.Itineraries.RemoveRange(itineraries);
+
+        var tripDestinations = _context.TripDestinations
+            .Where(td => td.TripId == tripId);
+
+        _context.TripDestinations.RemoveRange(tripDestinations);
+
+        _context.Trips.Remove(trip);
+
+        await _context.SaveChangesAsync();
+
+        return Success(null, "Trip deleted successfully.");
+    }
+    }
+   
 }

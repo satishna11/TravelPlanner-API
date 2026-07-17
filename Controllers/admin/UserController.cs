@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TravelAI.Data;
+using TravelAI.Models.DTOs;
 using TravelAI.Models.Entities;
 
 namespace TravelAI.Controllers.admin
@@ -37,14 +38,28 @@ namespace TravelAI.Controllers.admin
 
         // CREATE USER
         [HttpPost]
-        public async Task<IActionResult> CreateUser(Models.Entities.User user)
+        [HttpPost]
+        public async Task<IActionResult> CreateUser([FromBody] LoginRequest request)
         {
-            user.CreatedAt = DateTime.UtcNow;
+            var exists = await _context.Users
+                .FirstOrDefaultAsync(x => x.Email == request.Email);
+
+            if (exists != null)
+                return Fail("User already exists");
+
+            var user = new Models.Entities.User
+            {
+                FullName = request.FullName,
+                Email = request.Email,
+                UserType = "Admin",
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
+                CreatedAt = DateTime.UtcNow
+            };
 
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
 
-            return Success(user, "User created");
+            return Success(user, "User Created Successfully");
         }
 
         // UPDATE USER

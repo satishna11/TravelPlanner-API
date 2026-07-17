@@ -13,7 +13,7 @@ public class TripRequest
     public int Travellers { get; set; }
 
     public string Transportation { get; set; } = "";
-
+    public string TravelType { get; set; } = "";
     public string HotelCategory { get; set; } = "";
 
     public int Adventure { get; set; }

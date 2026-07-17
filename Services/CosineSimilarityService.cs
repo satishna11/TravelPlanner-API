@@ -55,17 +55,13 @@ namespace TravelAI.Services
             {
                 Clamp(request.Adventure),
                 Clamp(request.Nature),
-                Clamp(request.Culture),
-          
                 Clamp(request.Wildlife),
-                Clamp(request.Trekking),
-               
-         
                 Clamp(request.Religious),
-                Clamp(request.NightLife)
+                Clamp(request.Culture),
+                Clamp(request.Luxury),
+                Clamp(request.Trekking)
             };
         }
-
         private double[] BuildDestinationVector(DestinationFeature feature)
         {
             return new double[]

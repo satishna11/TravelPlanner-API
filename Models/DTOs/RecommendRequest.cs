@@ -24,10 +24,7 @@ public class RecommendationRequest
 
     public int Trekking { get; set; }
 
-    public int Family { get; set; }
-
-    public int Relaxation { get; set; }
-
+   
     public int Religious { get; set; }
 
     public int NightLife { get; set; }

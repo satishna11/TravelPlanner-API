@@ -26,5 +26,36 @@ namespace TravelAI.Controllers.User
 
             return Success(destinations);
         }
+        [HttpGet("{id}/activities")]
+        public async Task<IActionResult> GetActivities(int id)
+        {
+            var destination = await _context.Destinations
+                .FirstOrDefaultAsync(x => x.DestinationId == id);
+
+            if (destination == null)
+                return Fail("Destination not found");
+
+            var activities = await _context.DestinationActivity
+                .Where(x => x.DestinationId == id)
+                .Select(a => new
+                {
+                    a.ActivityName,
+                    a.Category,
+                    a.TimeSlot,
+                    a.DurationHours,
+                    a.EstimatedCost,
+                    a.ImageUrl
+                })
+                .ToListAsync();
+
+            return Success(new
+            {
+                destination.DestinationId,
+                destination.Name,
+                destination.Description,
+                destination.ImageUrl,
+                Activities = activities
+            });
+        }
     }
 }

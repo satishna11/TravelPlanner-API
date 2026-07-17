@@ -73,7 +73,7 @@ namespace TravelAI.Controllers
                         Category = h.Category,
                         Facilities = h.Facilities,
                         DestinationId = h.DestinationId,
-                        Image = null
+                        ImageUrl = h.ImageUrl
                     })
                     .ToListAsync();
 
@@ -96,7 +96,7 @@ namespace TravelAI.Controllers
                     Category = h.Category,
                     Facilities = h.Facilities,
                     DestinationId = h.DestinationId,
-                    Image = null
+                    ImageUrl = h.ImageUrl
                 })
                 .ToListAsync();
 
@@ -113,7 +113,7 @@ namespace TravelAI.Controllers
                         Category = h.Category,
                         Facilities = h.Facilities,
                         DestinationId = h.DestinationId,
-                        Image = null
+                        ImageUrl = h.ImageUrl
                     })
                     .ToListAsync();
             }

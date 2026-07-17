@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using TravelAI.Data;
 using TravelAI.Models.DTOs;
+using TravelAI.Models.Entities;
 
 public class ItineraryService
 {
@@ -11,22 +12,33 @@ public class ItineraryService
         _context = context;
     }
 
+
     public async Task<ItenaryResponse.ItineraryResponse> Generate(
         int userId,
         TripRequest request,
         int destinationId)
     {
-        // Get destination
-        var destination = await _context.Destinations
-            .FirstOrDefaultAsync(x => x.DestinationId == destinationId);
 
-        if (destination == null)
+        // ============================
+        // Destination
+        // ============================
+
+        var destination = await _context.Destinations
+            .FirstOrDefaultAsync(x =>
+                x.DestinationId == destinationId);
+
+
+        if(destination == null)
         {
             throw new Exception("Destination not found.");
         }
 
 
-        // Select hotel according to category
+
+        // ============================
+        // Hotel Selection
+        // ============================
+
         var hotel = await _context.Hotels
             .Where(x =>
                 x.DestinationId == destinationId &&
@@ -35,8 +47,9 @@ public class ItineraryService
             .FirstOrDefaultAsync();
 
 
-        // If category hotel not found, select highest rated hotel
-        if (hotel == null)
+        // fallback hotel
+
+        if(hotel == null)
         {
             hotel = await _context.Hotels
                 .Where(x => x.DestinationId == destinationId)
@@ -45,171 +58,378 @@ public class ItineraryService
         }
 
 
-        // Load activities
+
+        // ============================
+        // Activities
+        // ============================
+
         var activities = await _context.DestinationActivity
-            .Where(x => x.DestinationId == destinationId)
+            .Where(x =>
+                x.DestinationId == destinationId)
+            .OrderBy(x=>x.TimeSlot)
             .ToListAsync();
 
 
-        if (!activities.Any())
+
+        if(!activities.Any())
         {
-            throw new Exception("No activities available for this destination.");
+            throw new Exception(
+                "No activities found for this destination."
+            );
         }
 
 
-        // Create response only
-        // Nothing saved here
-        var response = new ItenaryResponse.ItineraryResponse
+
+        // ============================
+        // Budget Calculation
+        // Transport excluded
+        // ============================
+
+
+        decimal hotelCost = 0;
+
+
+        if(hotel != null)
         {
-            Destination = destination.Name,
-            HotelName = hotel?.HotelName ?? "",
-            Transportation = request.Transportation,
-            EstimatedBudget = request.Budget
-        };
+            hotelCost =
+                hotel.PricePerNight *
+                request.Days;
+        }
 
 
-        int index = 0;
+
+        decimal activityCost =
+            activities.Sum(x=>x.EstimatedCost)
+            *
+            request.Travellers;
 
 
-        for (int day = 1; day <= request.Days; day++)
+
+        decimal totalBudget =
+            hotelCost +
+            activityCost;
+
+
+
+        // ============================
+        // Response
+        // ============================
+
+
+        var response =
+            new ItenaryResponse.ItineraryResponse
+            {
+
+                Destination = destination.Name,
+
+                HotelName =
+                    hotel?.HotelName ?? "No hotel available",
+
+                Transportation =
+                    request.Transportation,
+
+                EstimatedBudget =
+                    totalBudget
+
+            };
+
+
+
+        int activityIndex = 0;
+
+
+
+        // ============================
+        // Generate Days
+        // ============================
+
+
+        for(int day=1; day<=request.Days; day++)
         {
-            var plan = new DayPlan
+
+
+            var dayPlan = new DayPlan
             {
                 Day = day
             };
 
 
-            string morningActivity = "";
-            string afternoonActivity = "";
-            string eveningActivity = "";
+
+            // ========================
+            // First Day
+            // ========================
 
 
-            // First day
-            if (day == 1)
+            if(day == 1)
             {
-                morningActivity = $"Travel to {destination.Name}";
 
-                afternoonActivity =
-                    $"Check in at {hotel?.HotelName ?? "recommended hotel"}";
-
-
-                plan.Activities.Add(morningActivity);
-                plan.Activities.Add(afternoonActivity);
+                dayPlan.Activities.Add(
+                    $"Travel to {destination.Name} by {request.Transportation}"
+                );
 
 
-                var evening = activities
-                    .FirstOrDefault(x => x.TimeSlot == "Evening");
+                dayPlan.Activities.Add(
+                    $"Check-in at {hotel?.HotelName ?? "recommended hotel"}"
+                );
 
 
-                if (evening != null)
+
+                AddTravelTypeActivity(
+                    dayPlan,
+                    request.TravelType
+                );
+
+
+                var evening =
+                    activities
+                    .FirstOrDefault(
+                        x=>x.TimeSlot=="Evening"
+                    );
+
+
+                if(evening!=null)
                 {
-                    eveningActivity = evening.ActivityName;
-                    plan.Activities.Add(eveningActivity);
+                    dayPlan.Activities.Add(
+                        evening.ActivityName
+                    );
                 }
 
 
-                plan.Activities.Add(
+                dayPlan.Activities.Add(
                     "Dinner at local restaurant"
                 );
+
             }
 
 
-            // Last day
-            else if (day == request.Days)
+
+            // ========================
+            // Last Day
+            // ========================
+
+            else if(day == request.Days)
             {
-                plan.Activities.Add("Breakfast");
+
+                dayPlan.Activities.Add(
+                    "Breakfast"
+                );
 
 
-                var morning = activities
-                    .Skip(index)
-                    .FirstOrDefault(x =>
-                        x.TimeSlot == "Morning");
+                var activity =
+                    GetNextActivity(
+                        activities,
+                        ref activityIndex,
+                        "Morning"
+                    );
 
 
-                if (morning != null)
+                if(activity!=null)
                 {
-                    morningActivity = morning.ActivityName;
-                    plan.Activities.Add(morningActivity);
-                    index++;
+                    dayPlan.Activities.Add(
+                        activity.ActivityName
+                    );
                 }
 
 
-                afternoonActivity = "Shopping";
-                eveningActivity = "Return Journey";
+
+                dayPlan.Activities.Add(
+                    "Shopping for souvenirs"
+                );
 
 
-                plan.Activities.Add(afternoonActivity);
-                plan.Activities.Add("Hotel Check-out");
-                plan.Activities.Add(eveningActivity);
+                dayPlan.Activities.Add(
+                    "Hotel check-out"
+                );
+
+
+                dayPlan.Activities.Add(
+                    "Return journey"
+                );
+
+
+                AddTravelTypeActivity(
+                    dayPlan,
+                    request.TravelType
+                );
+
             }
 
 
-            // Middle days
+
+            // ========================
+            // Middle Days
+            // ========================
+
             else
             {
-                plan.Activities.Add("Breakfast");
+
+                dayPlan.Activities.Add(
+                    "Breakfast"
+                );
 
 
-                var morning = activities
-                    .Skip(index)
-                    .FirstOrDefault(x =>
-                        x.TimeSlot == "Morning");
+
+                var morning =
+                    GetNextActivity(
+                        activities,
+                        ref activityIndex,
+                        "Morning"
+                    );
 
 
-                if (morning != null)
+                if(morning!=null)
                 {
-                    morningActivity = morning.ActivityName;
-                    plan.Activities.Add(morningActivity);
-                    index++;
+                    dayPlan.Activities.Add(
+                        morning.ActivityName
+                    );
                 }
 
 
 
-                var afternoon = activities
-                    .Skip(index)
-                    .FirstOrDefault(x =>
-                        x.TimeSlot == "Afternoon");
+                var afternoon =
+                    GetNextActivity(
+                        activities,
+                        ref activityIndex,
+                        "Afternoon"
+                    );
 
 
-                if (afternoon != null)
+                if(afternoon!=null)
                 {
-                    afternoonActivity = afternoon.ActivityName;
-                    plan.Activities.Add(afternoonActivity);
-                    index++;
+                    dayPlan.Activities.Add(
+                        afternoon.ActivityName
+                    );
                 }
 
 
 
-                var evening = activities
-                    .Skip(index)
-                    .FirstOrDefault(x =>
-                        x.TimeSlot == "Evening");
+                var evening =
+                    GetNextActivity(
+                        activities,
+                        ref activityIndex,
+                        "Evening"
+                    );
 
 
-                if (evening != null)
+                if(evening!=null)
                 {
-                    eveningActivity = evening.ActivityName;
-                    plan.Activities.Add(eveningActivity);
-                    index++;
+                    dayPlan.Activities.Add(
+                        evening.ActivityName
+                    );
                 }
 
 
-                plan.Activities.Add("Dinner");
+
+                AddTravelTypeActivity(
+                    dayPlan,
+                    request.TravelType
+                );
+
+
+                dayPlan.Activities.Add(
+                    "Dinner"
+                );
+
             }
 
 
 
-            // Only add to response
-            // Database saving happens after Save Trip button
-            response.Days.Add(plan);
+            response.Days.Add(dayPlan);
+
         }
 
 
 
-        // No SaveChangesAsync()
-        // No database insert
-
-
         return response;
+
     }
+
+
+
+    // ==================================
+    // Get activity by time
+    // ==================================
+
+    private DestinationActivity? GetNextActivity(
+        List<DestinationActivity> activities,
+        ref int index,
+        string time)
+    {
+
+        while(index < activities.Count)
+        {
+
+            var activity = activities[index];
+
+            index++;
+
+
+            if(activity.TimeSlot == time)
+            {
+                return activity;
+            }
+
+        }
+
+
+        return null;
+    }
+
+
+
+
+    // ==================================
+    // Travel Type Logic
+    // ==================================
+
+    private void AddTravelTypeActivity(
+        DayPlan plan,
+        string travelType)
+    {
+
+        switch(travelType)
+        {
+
+            case "Solo":
+
+                plan.Activities.Add(
+                    "Explore local places independently and enjoy personal time."
+                );
+
+                break;
+
+
+
+            case "Couple":
+
+                plan.Activities.Add(
+                    "Enjoy romantic viewpoints and memorable moments together."
+                );
+
+                break;
+
+
+
+            case "Family":
+
+                plan.Activities.Add(
+                    "Visit family-friendly attractions and spend quality time."
+                );
+
+                break;
+
+
+
+            case "Friends":
+
+                plan.Activities.Add(
+                    "Enjoy adventure activities and group experiences."
+                );
+
+                break;
+
+        }
+
+    }
+
 }

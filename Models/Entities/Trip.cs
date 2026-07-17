@@ -19,7 +19,7 @@ namespace TravelAI.Models.Entities
         public string Transportation { get; set; } = "";
 
         public string HotelCategory { get; set; } = "";
-
+        public string Status { get; set; } = "Upcoming";
 
         // Navigation properties
         public ICollection<TripDestination>? TripDestinations { get; set; }

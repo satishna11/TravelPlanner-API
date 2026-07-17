@@ -220,6 +220,46 @@ namespace TravelAI.Migrations
                     b.ToTable("Hotels");
                 });
 
+            modelBuilder.Entity("TravelAI.Models.Entities.Trip", b =>
+                {
+                    b.Property<int>("TripId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("TripId"));
+
+                    b.Property<decimal>("Budget")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("Days")
+                        .HasColumnType("int");
+
+                    b.Property<string>("HotelCategory")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Transportation")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("TravelDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Travellers")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("TripId");
+
+                    b.ToTable("Trips");
+                });
+
             modelBuilder.Entity("TravelAI.Models.Entities.TripDestination", b =>
                 {
                     b.Property<int>("TripDestinationId")
@@ -281,42 +321,6 @@ namespace TravelAI.Migrations
                     b.ToTable("Users");
                 });
 
-            modelBuilder.Entity("Trip", b =>
-                {
-                    b.Property<int>("TripId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("TripId"));
-
-                    b.Property<decimal>("Budget")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<int>("Days")
-                        .HasColumnType("int");
-
-                    b.Property<string>("HotelCategory")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Transportation")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("TravelDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("Travellers")
-                        .HasColumnType("int");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
-                    b.HasKey("TripId");
-
-                    b.ToTable("Trips");
-                });
-
             modelBuilder.Entity("DestinationFeature", b =>
                 {
                     b.HasOne("Destination", "Destination")
@@ -330,7 +334,7 @@ namespace TravelAI.Migrations
 
             modelBuilder.Entity("Itinerary", b =>
                 {
-                    b.HasOne("Trip", "Trip")
+                    b.HasOne("TravelAI.Models.Entities.Trip", "Trip")
                         .WithMany("Itineraries")
                         .HasForeignKey("TripId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -369,7 +373,7 @@ namespace TravelAI.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Trip", "Trip")
+                    b.HasOne("TravelAI.Models.Entities.Trip", "Trip")
                         .WithMany("TripDestinations")
                         .HasForeignKey("TripId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -387,7 +391,7 @@ namespace TravelAI.Migrations
                     b.Navigation("Hotels");
                 });
 
-            modelBuilder.Entity("Trip", b =>
+            modelBuilder.Entity("TravelAI.Models.Entities.Trip", b =>
                 {
                     b.Navigation("Itineraries");
 

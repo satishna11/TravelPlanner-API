@@ -16,30 +16,23 @@ namespace TravelAI.Controllers
         [HttpGet]
         public async Task<IActionResult> GetPopularDestinations()
         {
-            var popularDestinations = await _context.TripDestinations
-                .GroupBy(td => td.DestinationId)
-                .Select(g => new
+            var popularDestinations = await _context.Destinations
+                .Select(d => new
                 {
-                    DestinationId = g.Key,
-                    TotalBookings = g.Count()
+                    d.DestinationId,
+                    d.Name,
+                    d.City,
+                    d.Country,
+                    d.Description,
+                    d.AverageBudget,
+                    d.ImageUrl,
+                    d.ViewCount,
+
+                    TotalBookings = _context.TripDestinations
+                        .Count(td => td.DestinationId == d.DestinationId)
                 })
-                .Join(
-                    _context.Destinations,
-                    booking => booking.DestinationId,
-                    destination => destination.DestinationId,
-                    (booking, destination) => new
-                    {
-                        destination.DestinationId,
-                        destination.Name,
-                        destination.City,
-                        destination.Country,
-                        destination.Description,
-                        destination.AverageBudget,
-                        destination.ImageUrl,
-                        destination.ViewCount,
-                        TotalBookings = booking.TotalBookings
-                    })
                 .OrderByDescending(x => x.TotalBookings)
+                .ThenByDescending(x => x.ViewCount)
                 .Take(6)
                 .ToListAsync();
 
